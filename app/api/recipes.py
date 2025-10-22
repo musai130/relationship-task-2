@@ -8,7 +8,7 @@ from models import db_helper, Recipe
 from config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from schemas import RecipeCreate, RecipeRead
+from schemas import RecipeCreate, RecipeIngredientRead, RecipeRead
 from sqlalchemy.orm import selectinload
 
 router = APIRouter(
@@ -63,7 +63,16 @@ async def index(
         .order_by(Recipe.id)
     )
     recipes = await session.scalars(stmt)
-    return recipes.all()
+    
+    valid_recipes = []
+    for recipe in recipes.all():
+        recipe.recipe_ingredients = [
+            ri for ri in recipe.recipe_ingredients 
+            if ri.ingredient is not None
+        ]
+        valid_recipes.append(recipe)
+    
+    return valid_recipes
 
 @router.post("", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
 async def store(
@@ -114,11 +123,10 @@ async def store(
         description=recipe_create.description,
         cooking_time=recipe_create.cooking_time,
         difficulty=recipe_create.difficulty,
-        cuisine_id=recipe_create.cuisine_id
+        cuisine_id=recipe_create.cuisine_id,
+        allergens=allergens
     )
-    
-    recipe.allergens = allergens
-    
+
     session.add(recipe)
     await session.flush()
 

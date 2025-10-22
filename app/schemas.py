@@ -34,10 +34,10 @@ class RecipeCreate(BaseModel):
     difficulty: int
     cuisine_id: Optional[int] = None
     allergen_ids: List[int] = []
-    ingredients: List[RecipeIngredientCreate] = []
+    ingredients: List[RecipeIngredientCreate] =[]
 
 class RecipeIngredientRead(BaseModel):
-    ingredient: IngredientRead
+    ingredient: Optional[IngredientRead] = None
     quantity: float
     measurement: int
 class RecipeRead(BaseModel):
@@ -48,4 +48,14 @@ class RecipeRead(BaseModel):
     difficulty: int
     cuisine: Optional[CuisineRead] = None
     allergens: List[AllergenRead] = []
-    ingredients: List[RecipeIngredientRead] = []
+    recipe_ingredients: List[RecipeIngredientRead] = [] 
+
+class RecipeRead1(BaseModel):
+    id: int
+    title: str
+    description: str
+    cooking_time: int
+    difficulty: int
+    cuisine: Optional[CuisineRead] = None
+    allergens: List[AllergenRead] = []
+    ingredients: List[RecipeIngredientRead] = [] 

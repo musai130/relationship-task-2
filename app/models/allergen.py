@@ -5,6 +5,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from .recipe import Recipe
+    
 from .recipe import recipe_allergens
 
 class Allergen(Base):
