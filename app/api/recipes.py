@@ -32,8 +32,6 @@ class RecipeFilter(Filter):
     recipe_ingredients: Optional[RecipeIngredientFilter] = FilterDepends(
         with_prefix("recipe_ingredients", RecipeIngredientFilter)
     )
-
-    # 👇 меняем имя поля, чтобы не перекрывать метод sort()
     custom_order_by: Optional[list[str]] = ["id", 'difficulty']
 
     class Constants(Filter.Constants):
@@ -183,7 +181,7 @@ async def store(
     return recipe_with_relations
 
 @router.get("", response_model=Page[RecipeRead])
-async def get_recipes(
+async def index(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     filters: Optional[RecipeFilter] = FilterDepends(RecipeFilter)
 ):

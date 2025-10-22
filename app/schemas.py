@@ -1,28 +1,24 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
-# === Cuisine ===
 class CuisineBase(BaseModel):
     name: str = Field(..., example="Italian")
 
 class CuisineRead(CuisineBase):
     id: int
 
-# === Allergen ===
 class AllergenBase(BaseModel):
     name: str = Field(..., example="Gluten")
 
 class AllergenRead(AllergenBase):
     id: int
 
-# === Ingredient ===
 class IngredientBase(BaseModel):
     name: str = Field(..., example="Tomato")
 
 class IngredientRead(IngredientBase):
     id: int
 
-# === RecipeIngredient ===
 class RecipeIngredientBase(BaseModel):
     ingredient_id: int = Field(..., example=1, description="ID ингредиента")
     quantity: float = Field(..., example=2.5, description="Количество")
@@ -33,7 +29,6 @@ class RecipeIngredientRead(BaseModel):
     quantity: float
     measurement: str
 
-# === Recipe ===
 class RecipeCreate(BaseModel):
     title: str = Field(..., example="Spaghetti Bolognese")
     description: str = Field(..., example="A classic Italian pasta dish with meat sauce.")
