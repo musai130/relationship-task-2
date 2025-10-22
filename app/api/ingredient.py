@@ -1,10 +1,10 @@
-from typing import Annotated, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated, List, Dict, Any, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from models.recipe import Recipe
 from models.recipe_ingredients import RecipeIngredient
-from schemas import AllergenRead, CuisineRead, IngredientRead, RecipeIngredientRead, RecipeRead
+from schemas import IngredientRead
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select as sql_select
 from sqlalchemy.orm import selectinload
 from models import db_helper, Ingredient
 from config import settings
@@ -14,11 +14,89 @@ router = APIRouter(
     prefix=settings.url.ingredient,
 )
 
+
+@router.get("/{ingredient_id}/recipes", response_model=List[Dict[str, Any]])
+async def get_recipes_by_ingredient(
+    session: Annotated[
+        AsyncSession,
+        Depends(db_helper.session_getter),
+    ],
+    ingredient_id: int,
+    include: Optional[str] = Query(None, description="cuisine,ingredients,allergens"),
+    select: Optional[str] = Query(None, description="id,title,description,difficulty,cooking_time"),
+):
+    ingredient = await session.get(Ingredient, ingredient_id)
+    if not ingredient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ingredient with id {ingredient_id} not found"
+        )
+
+    includes = [i.strip() for i in (include or "").split(",") if i.strip()]
+    basic_fields = ["id", "title", "difficulty", "description", "cooking_time"]
+    if select:
+        selected_fields = [s.strip() for s in select.split(",") if s.strip()]
+        basic_fields = [f for f in selected_fields if f in basic_fields]
+
+    options = []
+    if "cuisine" in includes:
+        options.append(selectinload(Recipe.cuisine))
+    if "allergens" in includes:
+        options.append(selectinload(Recipe.allergens))
+    if "ingredients" in includes:
+        options.append(selectinload(Recipe.recipe_ingredients).selectinload(RecipeIngredient.ingredient))
+
+    stmt = (
+        sql_select(Recipe)
+        .join(Recipe.recipe_ingredients)
+        .where(RecipeIngredient.ingredient_id == ingredient_id)
+        .options(*options)
+        .order_by(Recipe.id)
+    )
+    
+    result = await session.scalars(stmt)
+    recipes_list = result.all()
+    
+    response = []
+    for recipe in recipes_list:
+        data = {field: getattr(recipe, field) for field in basic_fields}
+        
+        if "cuisine" in includes:
+            data["cuisine"] = (
+                {"id": recipe.cuisine.id, "name": recipe.cuisine.name}
+                if recipe.cuisine
+                else None
+            )
+        
+        if "allergens" in includes:
+            data["allergens"] = [
+                {"id": allergen.id, "name": allergen.name}
+                for allergen in recipe.allergens
+            ]
+        
+        if "ingredients" in includes:
+            ingredients_data = []
+            for ri in recipe.recipe_ingredients:
+                if ri.ingredient:
+                    ingredients_data.append({
+                        "ingredient": {
+                            "id": ri.ingredient.id,
+                            "name": ri.ingredient.name
+                        },
+                        "quantity": ri.quantity,
+                        "measurement": ri.measurement
+                    })
+            data["ingredients"] = ingredients_data
+        
+        response.append(data)
+    
+    return response
+
 @router.get("", response_model=list[IngredientRead])
 async def index(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
 ):
-    stmt = select(Ingredient).order_by(Ingredient.id)
+    stmt = sql_select(Ingredient).order_by(Ingredient.id)
     ingredients = await session.scalars(stmt)
     return ingredients.all()
 
@@ -59,82 +137,3 @@ async def destroy(
     ingredient = await session.get(Ingredient, id)
     await session.delete(ingredient)
     await session.commit()
-
-@router.get("/{ingredient_id}/recipes", response_model=List[RecipeRead])
-async def get_recipes_by_ingredient(
-    session: Annotated[
-        AsyncSession,
-        Depends(db_helper.session_getter),
-    ],
-    ingredient_id: int,
-):
-
-    ingredient = await session.get(Ingredient, ingredient_id)
-    if not ingredient:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Ingredient with id {ingredient_id} not found"
-        )
-
-    stmt = (
-        select(Recipe)
-        .join(Recipe.recipe_ingredients)
-        .where(RecipeIngredient.ingredient_id == ingredient_id)
-        .options(
-            selectinload(Recipe.cuisine),
-            selectinload(Recipe.allergens),
-            selectinload(Recipe.recipe_ingredients).selectinload(RecipeIngredient.ingredient)
-        )
-        .order_by(Recipe.id)
-    )
-    
-    recipes = await session.scalars(stmt)
-    recipes_list = recipes.all()
-    
-    result = []
-    for recipe in recipes_list:
-       
-        cuisine = None
-        if recipe.cuisine:
-            cuisine = CuisineRead(
-                id=recipe.cuisine.id,
-                name=recipe.cuisine.name
-            )
-
-        allergens = []
-        for allergen in recipe.allergens:
-            allergens.append(AllergenRead(
-                id=allergen.id,
-                name=allergen.name
-            ))
-
-        ingredients = []
-        for ri in recipe.recipe_ingredients:
-            if ri.ingredient is None:
-                continue
-
-            ingredient_read = IngredientRead(
-                id=ri.ingredient.id,
-                name=ri.ingredient.name
-            )
-            recipe_ingredient_read = RecipeIngredientRead(
-                ingredient=ingredient_read,
-                quantity=ri.quantity,
-                measurement=ri.measurement
-            )
-            ingredients.append(recipe_ingredient_read)
-        
-        recipe_read = RecipeRead(
-            id=recipe.id,
-            title=recipe.title,
-            description=recipe.description,
-            cooking_time=recipe.cooking_time,
-            difficulty=recipe.difficulty,
-            cuisine=cuisine,
-            allergens=allergens,
-            ingredients=ingredients
-        )
-        
-        result.append(recipe_read)
-    
-    return result
