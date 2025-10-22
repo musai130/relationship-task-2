@@ -2,7 +2,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.recipe import Recipe
 from models.recipe_ingredients import RecipeIngredient
-from schemas import AllergenRead, CuisineRead, IngredientCreate, IngredientRead, RecipeIngredientRead, RecipeRead, RecipeRead1
+from schemas import AllergenRead, CuisineRead, IngredientRead, RecipeIngredientRead, RecipeRead
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -25,7 +25,7 @@ async def index(
 @router.post("", response_model=IngredientRead, status_code=status.HTTP_201_CREATED)
 async def store(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
-    ingredient_create: IngredientCreate
+    ingredient_create: IngredientRead
 ):
     ingredient = Ingredient(name=ingredient_create.name)
     session.add(ingredient)
@@ -44,7 +44,7 @@ async def show(
 async def update(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     id: int,
-    ingredient_update: IngredientCreate
+    ingredient_update: IngredientRead
 ):
     ingredient = await session.get(Ingredient, id)
     ingredient.name = ingredient_update.name
@@ -60,7 +60,7 @@ async def destroy(
     await session.delete(ingredient)
     await session.commit()
 
-@router.get("/{ingredient_id}/recipes", response_model=List[RecipeRead1])
+@router.get("/{ingredient_id}/recipes", response_model=List[RecipeRead])
 async def get_recipes_by_ingredient(
     session: Annotated[
         AsyncSession,
@@ -124,7 +124,7 @@ async def get_recipes_by_ingredient(
             )
             ingredients.append(recipe_ingredient_read)
         
-        recipe_read = RecipeRead1(
+        recipe_read = RecipeRead(
             id=recipe.id,
             title=recipe.title,
             description=recipe.description,

@@ -1,5 +1,7 @@
-from typing import Annotated
+from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi_filter import FilterDepends
+from fastapi_pagination import Page, add_pagination, paginate
 from models.cuisine import Cuisine
 from models.ingredient import Ingredient
 from models.allergen import Allergen
@@ -8,13 +10,39 @@ from models import db_helper, Recipe
 from config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from schemas import RecipeCreate, RecipeIngredientRead, RecipeRead
+from schemas import RecipeCreate, RecipeRead
 from sqlalchemy.orm import selectinload
+from fastapi_filter.contrib.sqlalchemy import Filter
+from fastapi_pagination.ext.sqlalchemy import paginate as apaginate
+from fastapi_filter import with_prefix
 
 router = APIRouter(
     tags=["Recipes"],
     prefix=settings.url.recipe,
 )
+
+class RecipeIngredientFilter(Filter):
+    ingredient_id: Optional[int] = None
+
+    class Constants(Filter.Constants):
+        model = RecipeIngredient
+
+class RecipeFilter(Filter):
+    title__like: Optional[str] = None
+    recipe_ingredients: Optional[RecipeIngredientFilter] = FilterDepends(
+        with_prefix("recipe_ingredients", RecipeIngredientFilter)
+    )
+
+    # 👇 меняем имя поля, чтобы не перекрывать метод sort()
+    custom_order_by: Optional[list[str]] = ["id", 'difficulty']
+
+    class Constants(Filter.Constants):
+        model = Recipe
+        ordering_field_name = "custom_order_by"
+        search_model_fields = ["title"]
+
+
+
 
 @router.put("/{id}", response_model=RecipeRead)
 async def update(
@@ -46,33 +74,33 @@ async def destroy(
     await session.delete(recipe)
     await session.commit()
 
-@router.get("", response_model=list[RecipeRead])
-async def index(
-    session: Annotated[
-        AsyncSession,
-        Depends(db_helper.session_getter),
-    ],
-):
-    stmt = (
-        select(Recipe)
-        .options(
-            selectinload(Recipe.cuisine),
-            selectinload(Recipe.allergens),
-            selectinload(Recipe.recipe_ingredients).selectinload(RecipeIngredient.ingredient)
-        )
-        .order_by(Recipe.id)
-    )
-    recipes = await session.scalars(stmt)
+# @router.get("", response_model=list[RecipeRead])
+# async def index(
+#     session: Annotated[
+#         AsyncSession,
+#         Depends(db_helper.session_getter),
+#     ],
+# ):
+#     stmt = (
+#         select(Recipe)
+#         .options(
+#             selectinload(Recipe.cuisine),
+#             selectinload(Recipe.allergens),
+#             selectinload(Recipe.recipe_ingredients).selectinload(RecipeIngredient.ingredient)
+#         )
+#         .order_by(Recipe.id)
+#     )
+#     recipes = await session.scalars(stmt)
     
-    valid_recipes = []
-    for recipe in recipes.all():
-        recipe.recipe_ingredients = [
-            ri for ri in recipe.recipe_ingredients 
-            if ri.ingredient is not None
-        ]
-        valid_recipes.append(recipe)
+#     valid_recipes = []
+#     for recipe in recipes.all():
+#         recipe.recipe_ingredients = [
+#             ri for ri in recipe.recipe_ingredients 
+#             if ri.ingredient is not None
+#         ]
+#         valid_recipes.append(recipe)
     
-    return valid_recipes
+#     return valid_recipes
 
 @router.post("", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
 async def store(
@@ -154,6 +182,29 @@ async def store(
     
     return recipe_with_relations
 
+@router.get("", response_model=Page[RecipeRead])
+async def get_recipes(
+    session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
+    filters: Optional[RecipeFilter] = FilterDepends(RecipeFilter)
+):
+    stmt = (
+        select(Recipe)
+        .outerjoin(Recipe.recipe_ingredients)
+        .outerjoin(RecipeIngredient.ingredient)
+        .options(
+            selectinload(Recipe.cuisine),
+            selectinload(Recipe.allergens),
+            selectinload(Recipe.recipe_ingredients).selectinload(RecipeIngredient.ingredient)
+        )
+        .distinct()
+    )
+
+    if filters:
+        stmt = filters.filter(stmt)
+        stmt = filters.sort(stmt)
+
+    return await apaginate(session, stmt)
+
 @router.get("/{id}", response_model=RecipeRead)
 async def show(
     session: Annotated[
@@ -181,3 +232,4 @@ async def show(
     
     return recipe
 
+add_pagination(router)

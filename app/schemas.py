@@ -1,61 +1,57 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-class CuisineRead(BaseModel):
+# === Cuisine ===
+class CuisineBase(BaseModel):
+    name: str = Field(..., example="Italian")
+
+class CuisineRead(CuisineBase):
     id: int
-    name: str
 
-class CuisineCreate(BaseModel):
-    name: str
+# === Allergen ===
+class AllergenBase(BaseModel):
+    name: str = Field(..., example="Gluten")
 
-class AllergenRead(BaseModel):
+class AllergenRead(AllergenBase):
     id: int
-    name: str
 
-class AllergenCreate(BaseModel):
-    name: str
+# === Ingredient ===
+class IngredientBase(BaseModel):
+    name: str = Field(..., example="Tomato")
 
-class IngredientRead(BaseModel):
+class IngredientRead(IngredientBase):
     id: int
-    name: str
 
-class IngredientCreate(BaseModel):
-    name: str
-
-class RecipeIngredientCreate(BaseModel):
-    ingredient_id: int
-    quantity: float
-    measurement: int
-
-class RecipeCreate(BaseModel):
-    title: str
-    description: str
-    cooking_time: int
-    difficulty: int
-    cuisine_id: Optional[int] = None
-    allergen_ids: List[int] = []
-    ingredients: List[RecipeIngredientCreate] =[]
+# === RecipeIngredient ===
+class RecipeIngredientBase(BaseModel):
+    ingredient_id: int = Field(..., example=1, description="ID ингредиента")
+    quantity: float = Field(..., example=2.5, description="Количество")
+    measurement: str = Field(..., example="g", description="Единица измерения (гр, мл и т.п.)")
 
 class RecipeIngredientRead(BaseModel):
-    ingredient: Optional[IngredientRead] = None
+    ingredient: IngredientRead
     quantity: float
-    measurement: int
+    measurement: str
+
+# === Recipe ===
+class RecipeCreate(BaseModel):
+    title: str = Field(..., example="Spaghetti Bolognese")
+    description: str = Field(..., example="A classic Italian pasta dish with meat sauce.")
+    cooking_time: int = Field(..., example=45, description="Время приготовления в минутах")
+    difficulty: int = Field(..., example=3, description="Сложность от 1 до 5")
+    cuisine_id: Optional[int] = Field(None, example=1, description="ID кухни")
+    allergens: Optional[List[int]] = Field(default_factory=list, description="ID аллергенов")
+    ingredients: List[RecipeIngredientBase] = Field(..., description="Список ингредиентов с количеством")
+
 class RecipeRead(BaseModel):
     id: int
     title: str
     description: str
     cooking_time: int
     difficulty: int
-    cuisine: Optional[CuisineRead] = None
-    allergens: List[AllergenRead] = []
-    recipe_ingredients: List[RecipeIngredientRead] = [] 
+    cuisine: Optional[CuisineRead]
+    allergens: List[AllergenRead]
+    ingredients: List[RecipeIngredientRead]
 
-class RecipeRead1(BaseModel):
-    id: int
-    title: str
-    description: str
-    cooking_time: int
-    difficulty: int
-    cuisine: Optional[CuisineRead] = None
-    allergens: List[AllergenRead] = []
-    ingredients: List[RecipeIngredientRead] = [] 
+    class Config:
+        orm_mode = True
