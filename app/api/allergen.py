@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, status
-from schemas import AllergenRead
+from schemas import AllergenCreate, AllergenRead
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -23,7 +23,7 @@ async def index(
 @router.post("", response_model=AllergenRead, status_code=status.HTTP_201_CREATED)
 async def store(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
-    allergen_create: AllergenRead
+    allergen_create: AllergenCreate
 ):
     allergen = Allergen(name=allergen_create.name)
     session.add(allergen)
@@ -42,7 +42,7 @@ async def show(
 async def update(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     id: int,
-    allergen_update: AllergenRead
+    allergen_update: AllergenCreate
 ):
     allergen = await session.get(Allergen, id)
     allergen.name = allergen_update.name

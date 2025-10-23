@@ -1,52 +1,61 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-class CuisineBase(BaseModel):
-    name: str = Field(..., example="Italian")
-
-class CuisineRead(CuisineBase):
+class CuisineRead(BaseModel):
     id: int
+    name: str
 
-class AllergenBase(BaseModel):
-    name: str = Field(..., example="Gluten")
+class CuisineCreate(BaseModel):
+    name: str
 
-class AllergenRead(AllergenBase):
+class AllergenRead(BaseModel):
     id: int
+    name: str
 
-class IngredientBase(BaseModel):
-    name: str = Field(..., example="Tomato")
+class AllergenCreate(BaseModel):
+    name: str
 
-class IngredientRead(IngredientBase):
+class IngredientRead(BaseModel):
     id: int
+    name: str
 
-class RecipeIngredientBase(BaseModel):
-    ingredient_id: int = Field(..., example=1, description="ID ингредиента")
-    quantity: float = Field(..., example=2.5, description="Количество")
-    measurement: str = Field(..., example="g", description="Единица измерения (гр, мл и т.п.)")
+class IngredientCreate(BaseModel):
+    name: str
 
-class RecipeIngredientRead(BaseModel):
-    ingredient: IngredientRead
+class RecipeIngredientCreate(BaseModel):
+    ingredient_id: int
     quantity: float
-    measurement: str
+    measurement: int
 
 class RecipeCreate(BaseModel):
-    title: str = Field(..., example="Spaghetti Bolognese")
-    description: str = Field(..., example="A classic Italian pasta dish with meat sauce.")
-    cooking_time: int = Field(..., example=45, description="Время приготовления в минутах")
-    difficulty: int = Field(..., example=3, description="Сложность от 1 до 5")
-    cuisine_id: Optional[int] = Field(None, example=1, description="ID кухни")
-    allergens: Optional[List[int]] = Field(default_factory=list, description="ID аллергенов")
-    ingredients: List[RecipeIngredientBase] = Field(..., description="Список ингредиентов с количеством")
+    title: str
+    description: str
+    cooking_time: int
+    difficulty: int
+    cuisine_id: Optional[int] = None
+    allergen_ids: List[int] = []
+    ingredients: List[RecipeIngredientCreate] =[]
 
+class RecipeIngredientRead(BaseModel):
+    ingredient: Optional[IngredientRead] = None
+    quantity: float
+    measurement: int
 class RecipeRead(BaseModel):
     id: int
     title: str
     description: str
     cooking_time: int
     difficulty: int
-    cuisine: Optional[CuisineRead]
-    allergens: List[AllergenRead]
-    ingredients: List[RecipeIngredientRead]
+    cuisine: Optional[CuisineRead] = None
+    allergens: List[AllergenRead] = []
+    recipe_ingredients: List[RecipeIngredientRead] = [] 
 
-    class Config:
-        orm_mode = True
+class RecipeRead1(BaseModel):
+    id: int
+    title: str
+    description: str
+    cooking_time: int
+    difficulty: int
+    cuisine: Optional[CuisineRead] = None
+    allergens: List[AllergenRead] = []
+    ingredients: List[RecipeIngredientRead] = [] 

@@ -2,7 +2,7 @@ from typing import Annotated, List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from models.recipe import Recipe
 from models.recipe_ingredients import RecipeIngredient
-from schemas import IngredientRead
+from schemas import IngredientCreate, IngredientRead
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select as sql_select
 from sqlalchemy.orm import selectinload
@@ -103,7 +103,7 @@ async def index(
 @router.post("", response_model=IngredientRead, status_code=status.HTTP_201_CREATED)
 async def store(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
-    ingredient_create: IngredientRead
+    ingredient_create: IngredientCreate
 ):
     ingredient = Ingredient(name=ingredient_create.name)
     session.add(ingredient)
@@ -122,7 +122,7 @@ async def show(
 async def update(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     id: int,
-    ingredient_update: IngredientRead
+    ingredient_update: IngredientCreate
 ):
     ingredient = await session.get(Ingredient, id)
     ingredient.name = ingredient_update.name
@@ -137,3 +137,5 @@ async def destroy(
     ingredient = await session.get(Ingredient, id)
     await session.delete(ingredient)
     await session.commit()
+
+    #ютуб Сурен питон

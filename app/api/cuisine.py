@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, status
-from schemas import CuisineRead
+from schemas import CuisineCreate, CuisineRead
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -23,7 +23,7 @@ async def index(
 @router.post("", response_model=CuisineRead, status_code=status.HTTP_201_CREATED)
 async def store(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
-    cuisine_create: CuisineRead
+    cuisine_create: CuisineCreate
 ):
     cuisine = Cuisine(name=cuisine_create.name)
     session.add(cuisine)
@@ -42,7 +42,7 @@ async def show(
 async def update(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     id: int,
-    cuisine_update: CuisineRead
+    cuisine_update: CuisineCreate
 ):
     cuisine = await session.get(Cuisine, id)
     cuisine.name = cuisine_update.name
