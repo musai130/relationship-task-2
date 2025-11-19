@@ -78,13 +78,14 @@ async def get_recipes_by_ingredient(
             ingredients_data = []
             for ri in recipe.recipe_ingredients:
                 if ri.ingredient:
+                    measurement_str = ri.measurement.label if hasattr(ri.measurement, 'label') else str(ri.measurement)
                     ingredients_data.append({
                         "ingredient": {
                             "id": ri.ingredient.id,
                             "name": ri.ingredient.name
                         },
                         "quantity": ri.quantity,
-                        "measurement": ri.measurement
+                        "measurement": measurement_str
                     })
             data["ingredients"] = ingredients_data
         
@@ -105,6 +106,15 @@ async def store(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     ingredient_create: IngredientRead
 ):
+    existing = await session.scalar(
+        sql_select(Ingredient).where(Ingredient.name == ingredient_create.name)
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ingredient with name '{ingredient_create.name}' already exists"
+        )
+
     ingredient = Ingredient(name=ingredient_create.name)
     session.add(ingredient)
     await session.commit()
@@ -116,6 +126,11 @@ async def show(
     id: int,
 ):
     ingredient = await session.get(Ingredient, id)
+    if not ingredient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ingredient with id {id} not found"
+        )
     return ingredient
 
 @router.put("/{id}", response_model=IngredientRead)
@@ -125,6 +140,21 @@ async def update(
     ingredient_update: IngredientRead
 ):
     ingredient = await session.get(Ingredient, id)
+    if not ingredient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ingredient with id {id} not found"
+        )
+    
+    existing = await session.scalar(
+        sql_select(Ingredient).where(Ingredient.name == ingredient_update.name, Ingredient.id != id)
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ingredient with name '{ingredient_update.name}' already exists"
+        )
+    
     ingredient.name = ingredient_update.name
     await session.commit()
     return ingredient
@@ -135,5 +165,10 @@ async def destroy(
     id: int,
 ):
     ingredient = await session.get(Ingredient, id)
+    if not ingredient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ingredient with id {id} not found"
+        )
     await session.delete(ingredient)
     await session.commit()

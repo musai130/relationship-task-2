@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from .cuisine import Cuisine
     from .allergen import Allergen
     from .recipe_ingredients import RecipeIngredient
+    from .users import User
+
 
 recipe_allergens = Table(
     'recipe_allergens',
@@ -28,16 +30,21 @@ class Recipe(Base):
     cuisine_id: Mapped[Optional[int]] = mapped_column(ForeignKey('cuisine.id'), nullable=True, index=True)
     
     cuisine: Mapped["Cuisine"] = relationship("Cuisine", back_populates="recipes")
+    
     allergens: Mapped[List["Allergen"]] = relationship(
-        "Allergen", 
-        secondary=recipe_allergens, 
+        "Allergen",
+        secondary=recipe_allergens,
         back_populates="recipes"
     )
+    
     recipe_ingredients: Mapped[List["RecipeIngredient"]] = relationship(
-        "RecipeIngredient", 
+        "RecipeIngredient",
         back_populates="recipe",
         cascade="all, delete-orphan"
     )
+
+    author_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    author: Mapped["User"] = relationship("User", back_populates="recipes")
 
     def __repr__(self):
         return f"Recipe(id={self.id}, title={self.title})"

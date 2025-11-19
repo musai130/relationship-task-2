@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from schemas import CuisineRead
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -25,6 +25,15 @@ async def store(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
     cuisine_create: CuisineRead
 ):
+    existing = await session.scalar(
+        select(Cuisine).where(Cuisine.name == cuisine_create.name)
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cuisine with name '{cuisine_create.name}' already exists"
+        )
+
     cuisine = Cuisine(name=cuisine_create.name)
     session.add(cuisine)
     await session.commit()
@@ -36,6 +45,11 @@ async def show(
     id: int,
 ):
     cuisine = await session.get(Cuisine, id)
+    if not cuisine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cuisine with id {id} not found"
+        )
     return cuisine
 
 @router.put("/{id}", response_model=CuisineRead)
@@ -45,6 +59,21 @@ async def update(
     cuisine_update: CuisineRead
 ):
     cuisine = await session.get(Cuisine, id)
+    if not cuisine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cuisine with id {id} not found"
+        )
+    
+    existing = await session.scalar(
+        select(Cuisine).where(Cuisine.name == cuisine_update.name, Cuisine.id != id)
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cuisine with name '{cuisine_update.name}' already exists"
+        )
+    
     cuisine.name = cuisine_update.name
     await session.commit()
     return cuisine
@@ -55,5 +84,10 @@ async def destroy(
     id: int,
 ):
     cuisine = await session.get(Cuisine, id)
+    if not cuisine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cuisine with id {id} not found"
+        )
     await session.delete(cuisine)
     await session.commit()

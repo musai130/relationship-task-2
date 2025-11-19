@@ -1,8 +1,10 @@
-from pydantic import BaseModel, PostgresDsn
+from typing import Literal
+from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
 )
+
 
 
 class RunConfig(BaseModel):
@@ -13,16 +15,11 @@ class RunConfig(BaseModel):
 
 class DatabaseConfig(BaseModel):
     url: str
-    echo: bool = False
+    echo: bool = True
+    echo_pool: bool = False
+    pool_size: int = 50
+    max_overflow: int = 10
     future: bool = True
-
-
-# class DatabaseConfig(BaseModel):
-#     url: PostgresDsn
-#     echo: bool = True
-#     echo_pool: bool = False
-#     pool_size: int = 50
-#     max_overflow: int = 10
 
 
 class UrlPrefix(BaseModel):
@@ -33,6 +30,27 @@ class UrlPrefix(BaseModel):
     ingredient: str = "/ingredient"
     cuisine: str = "/cuisine"
     allergen: str = "/allergen"
+    auth: str = "/auth"
+
+    @property
+    def bearer_token_url(self) -> str:
+        # api/auth/login
+        parts = (self.prefix, self.auth, "/login")
+        path = "".join(parts)
+        return path.removeprefix("/")
+
+
+class AuthConfig(BaseModel):
+    cookie_max_age: int = 3600
+    cookie_secure: bool = False
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+
+
+class AccessToken(BaseModel):
+    lifetime_seconds: int = 3600
+    reset_password_token_secret: str
+    verification_token_secret: str
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -43,7 +61,9 @@ class Settings(BaseSettings):
     )
     run: RunConfig = RunConfig()
     url: UrlPrefix = UrlPrefix()
+    auth: AuthConfig = AuthConfig()
     db: DatabaseConfig
+    access_token: AccessToken
 
 
 settings = Settings()
