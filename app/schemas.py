@@ -53,7 +53,6 @@ class UserRead(BaseModel):
         orm_mode = True
 
 class AuthorRead(BaseModel):
-    """Схема для автора рецепта"""
     id: int
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -62,14 +61,12 @@ class AuthorRead(BaseModel):
         orm_mode = True
 
 class RecipeIngredientRead(BaseModel):
-    """Схема для ингредиента в рецепте с id напрямую"""
     id: int
     quantity: float
     measurement: str
     
     @root_validator(pre=True)
     def extract_data(cls, values):
-        """Извлекает данные из объекта RecipeIngredient"""
         if isinstance(values, dict):
             if 'id' in values and isinstance(values.get('id'), int) and 'quantity' in values and 'measurement' in values:
                 return values
