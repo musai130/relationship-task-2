@@ -6,17 +6,23 @@ from contextlib import asynccontextmanager
 from models import db_helper,Base
 from api import router as api_router
 from fastapi.middleware.cors import CORSMiddleware
+from task_queue import broker
+from fastapi.staticfiles import StaticFiles
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
     async with db_helper.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    if not broker.is_worker_process:
+        await broker.startup()
+
     yield
-    # shutdown
     await db_helper.dispose()
+
+    if not broker.is_worker_process:
+        await broker.shutdown()
 
 main_app = FastAPI(
     lifespan=lifespan,
@@ -24,6 +30,7 @@ main_app = FastAPI(
 main_app.include_router(
     api_router,
 )
+main_app.mount("/static", StaticFiles(directory="static"), name="static")
 
 origins = [
     "http://localhost",

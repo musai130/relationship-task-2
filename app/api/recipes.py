@@ -195,34 +195,6 @@ async def delete_recipe(
     await session.delete(recipe)
     await session.commit()
 
-# @router.get("", response_model=list[RecipeRead])
-# async def index(
-#     session: Annotated[
-#         AsyncSession,
-#         Depends(db_helper.session_getter),
-#     ],
-# ):
-#     stmt = (
-#         select(Recipe)
-#         .options(
-#             selectinload(Recipe.cuisine),
-#             selectinload(Recipe.allergens),
-#             selectinload(Recipe.recipe_ingredients).selectinload(RecipeIngredient.ingredient)
-#         )
-#         .order_by(Recipe.id)
-#     )
-#     recipes = await session.scalars(stmt)
-    
-#     valid_recipes = []
-#     for recipe in recipes.all():
-#         recipe.recipe_ingredients = [
-#             ri for ri in recipe.recipe_ingredients 
-#             if ri.ingredient is not None
-#         ]
-#         valid_recipes.append(recipe)
-    
-#     return valid_recipes
-
 @router.post("", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
 async def store(
     session: Annotated[

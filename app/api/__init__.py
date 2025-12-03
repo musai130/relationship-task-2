@@ -9,6 +9,7 @@ from .ingredient import router as ingredient
 from .cuisine import router as cuisine
 from .allergen import router as allergen
 from .auth import router as auth_router
+from .videos import router as videos_router
 http_bearer = HTTPBearer(auto_error=False)
 
 router = APIRouter(
@@ -22,3 +23,4 @@ router.include_router(ingredient)
 router.include_router(cuisine)
 router.include_router(allergen)
 router.include_router(auth_router)
+router.include_router(videos_router)

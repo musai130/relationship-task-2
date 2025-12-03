@@ -6,6 +6,6 @@ dist/
 wheels/
 *.egg-info
 # Uploads
-/static/uploads/*
+app/static/*
 # Virtual environments
 .venv

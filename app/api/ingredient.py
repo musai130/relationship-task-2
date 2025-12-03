@@ -172,5 +172,3 @@ async def destroy(
         )
     await session.delete(ingredient)
     await session.commit()
-
-    #ютуб Сурен питон

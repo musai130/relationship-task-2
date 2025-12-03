@@ -7,6 +7,8 @@ __all__ = [
     "Ingredient",
     "RecipeIngredient",
     "Recipe",
+    "Video",
+    "VideoStatus",
 ]
 
 from .db_helper import db_helper
@@ -18,3 +20,4 @@ from .allergen import Allergen
 from .ingredient import Ingredient
 from .recipe_ingredients import RecipeIngredient
 from .recipe import Recipe
+from .video import Video, VideoStatus

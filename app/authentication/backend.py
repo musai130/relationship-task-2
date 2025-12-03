@@ -5,8 +5,6 @@ from .transport import bearer_transport
 
 authentication_backend = AuthenticationBackend(
     name="access-tokens-db",
-    # transport=cookie_transport,
     transport=bearer_transport,
     get_strategy=get_jwt_strategy,
-    # get_strategy=get_database_strategy,
 )

@@ -8,6 +8,7 @@ from pydantic_settings import (
 
 
 class RunConfig(BaseModel):
+    app_url: str = "http://localhost:8000"
     host: str = "0.0.0.0"
     port: int = 8000
     reload: bool = False
@@ -31,10 +32,10 @@ class UrlPrefix(BaseModel):
     cuisine: str = "/cuisine"
     allergen: str = "/allergen"
     auth: str = "/auth"
+    videos: str = "/videos"
 
     @property
     def bearer_token_url(self) -> str:
-        # api/auth/login
         parts = (self.prefix, self.auth, "/login")
         path = "".join(parts)
         return path.removeprefix("/")
