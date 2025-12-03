@@ -8,6 +8,11 @@ from sqlalchemy import select as sql_select
 from sqlalchemy.orm import selectinload
 from models import db_helper, Ingredient
 from config import settings
+from service.data_shaping import (
+    parse_include_param,
+    parse_select_param,
+    format_recipes_data,
+)
 
 router = APIRouter(
     tags=["Ingredients"],
@@ -32,11 +37,9 @@ async def get_recipes_by_ingredient(
             detail=f"Ingredient with id {ingredient_id} not found"
         )
 
-    includes = [i.strip() for i in (include or "").split(",") if i.strip()]
+    includes = parse_include_param(include)
     basic_fields = ["id", "title", "difficulty", "description", "cooking_time"]
-    if select:
-        selected_fields = [s.strip() for s in select.split(",") if s.strip()]
-        basic_fields = [f for f in selected_fields if f in basic_fields]
+    selected_fields = parse_select_param(select, basic_fields)
 
     options = []
     if "cuisine" in includes:
@@ -57,41 +60,7 @@ async def get_recipes_by_ingredient(
     result = await session.scalars(stmt)
     recipes_list = result.all()
     
-    response = []
-    for recipe in recipes_list:
-        data = {field: getattr(recipe, field) for field in basic_fields}
-        
-        if "cuisine" in includes:
-            data["cuisine"] = (
-                {"id": recipe.cuisine.id, "name": recipe.cuisine.name}
-                if recipe.cuisine
-                else None
-            )
-        
-        if "allergens" in includes:
-            data["allergens"] = [
-                {"id": allergen.id, "name": allergen.name}
-                for allergen in recipe.allergens
-            ]
-        
-        if "ingredients" in includes:
-            ingredients_data = []
-            for ri in recipe.recipe_ingredients:
-                if ri.ingredient:
-                    measurement_str = ri.measurement.label if hasattr(ri.measurement, 'label') else str(ri.measurement)
-                    ingredients_data.append({
-                        "ingredient": {
-                            "id": ri.ingredient.id,
-                            "name": ri.ingredient.name
-                        },
-                        "quantity": ri.quantity,
-                        "measurement": measurement_str
-                    })
-            data["ingredients"] = ingredients_data
-        
-        response.append(data)
-    
-    return response
+    return format_recipes_data(recipes_list, selected_fields, includes)
 
 @router.get("", response_model=list[IngredientRead])
 async def index(
