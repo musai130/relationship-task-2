@@ -1,5 +1,6 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from config import settings
 from contextlib import asynccontextmanager
 
@@ -8,6 +9,7 @@ from api import router as api_router
 from fastapi.middleware.cors import CORSMiddleware
 from task_queue import broker
 from fastapi.staticfiles import StaticFiles
+from exceptions import AppException
 
 
 @asynccontextmanager
@@ -48,6 +50,15 @@ main_app.add_middleware(
     allow_headers=["Authorization"],
     expose_headers=["X-File-Name"],
 )
+
+
+@main_app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.to_dict(),
+    )
+
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -9,9 +9,10 @@ __all__ = [
     "Recipe",
     "Video",
     "VideoStatus",
+    "SessionDep",
 ]
 
-from .db_helper import db_helper
+from .db_helper import db_helper, SessionDep
 from .base import Base
 
 from .post import Post
